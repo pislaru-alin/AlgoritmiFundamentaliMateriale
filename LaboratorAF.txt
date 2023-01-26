@@ -1,0 +1,1882 @@
+1. Se dă un graf neorientat ponderat G cu n>3 vârfuri, m muchii și un vârf s. 
+Informațiile despre graf se citesc din fișierul graf.in cu structura:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitățile unei muchii
+- pe ultima linie este un vârf sursă s.
+Pentru un lanț P în G definim ponderea lanțului P ca fiind produsul ponderilor muchiilor care îl compun.
+Dacă G este arbore, să se afișeze pentru fiecare vârf v ponderea unicului lanț elementar de la s la v (sub forma v: pondere lanț de la s la v), altfel să se afișeze un arbore parțial al componentei care conține s. Complexitate O(n+m)
+  
+
+
+graf.in             Iesire pe ecran 
+6 5                    Este arbore
+1 2 3                     1: 0
+1 3 2                     2: 3
+2 4 2                     3: 2
+3 5 1                     4: 6
+3 6 3                     5: 2
+1                         6: 6
+
+
+from collections import defaultdict
+
+def read_graph(file_name):
+    with open(file_name, 'r') as f:
+        n, m = map(int, f.readline().strip().split())
+        edges = defaultdict(list)
+        for _ in range(m):
+            u, v = map(int, f.readline().strip().split())
+            edges[u].append(v)
+            edges[v].append(u)
+        s = int(f.readline().strip())
+    return n, edges, s
+
+def dfs(v, parent, edges, s, weights, visited):
+    visited[v] = True
+    if v != s:
+        weight = weights[(parent, v)]
+    else:
+        weight = 1
+    for neighbor in edges[v]:
+        if not visited[neighbor]:
+            weight *= dfs(neighbor, v, edges, s, weights, visited)
+    return weight
+
+def main(file_name):
+    n, edges, s = read_graph(file_name)
+    weights = defaultdict(int)  # store the weight of each edge
+    visited = [False] * (n + 1)
+    for u in edges:
+        for v in edges[u]:
+            if (u, v) not in weights:
+                weights[(u, v)] = int(input(f"Enter weight of edge {u}-{v}: "))
+    if len(edges[s]) <= 1:  # special case: s is a leaf
+        print("The graph is a tree.")
+        for v in edges:
+            if v != s:
+                print(f"{v}: {dfs(v, s, edges, s, weights, visited)}")
+    else:
+        print("The graph is not a tree.")
+        print("Partial tree of the component containing s:")
+        for v in edges[s]:
+            print(f"{s}-{v}")
+            dfs(v, s, edges, s, weights, visited)
+
+file_name = 'graf.in'
+main(file_name)
+
+
+
+
+2.Se citesc informații despre un graf neorientat ponderat conex G din fișierul graf.in. 
+Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de muchii m ale grafului, m>n
+- pe următoarele m linii sunt câte 3 numere pozitive reprezentând extremitatea inițială, extremitatea finală și costul unei muchii din graf 
+- pe ultima linie sunt un număr natural k (0<k<n) și un șir de k vârfuri reprezentând vârfurile sursă ale grafului s1,…,sk
+Să se afișeze muchiile unui graf parțial al lui G în care fiecare vârf v este conectat prin cel puțin un lanț de o sursă. Dacă există mai multe astfel de grafuri parțiale, 
+să se determine unul cu costul total minim. Se vor afișa muchiile acestui graf parțial. De asemenea, să se afișeze și care este vârful sursă cel mai important în acest graf parțial, 
+importanța unui vârf sursă fiind dată de numărul de vârfuri accesibile din acea sursă (care sunt conectate la acea sursă prin lanț). Complexitate O(mlog(n)).
+
+
+import heapq
+
+def read_graph(file_name):
+    with open(file_name, 'r') as f:
+        n, m = map(int, f.readline().strip().split())
+        edges = []
+        for _ in range(m):
+            u, v, w = map(int, f.readline().strip().split())
+            edges.append((u, v, w))
+        k = int(f.readline().strip())
+        source_vertices = list(map(int, f.readline().strip().split()))
+    return n, edges, source_vertices
+
+def dijkstra(n, edges, source):
+    dist = [float('inf')] * (n+1)
+    dist[source] = 0
+    queue = [(0, source)]
+    while queue:
+        d, u = heapq.heappop(queue)
+        if d == dist[u]:
+            for v, w in edges[u]:
+                if dist[u] + w < dist[v]:
+                    dist[v] = dist[u] + w
+                    heapq.heappush(queue, (dist[v], v))
+    return dist
+
+def main(file_name):
+    n, edges, source_vertices = read_graph(file_name)
+    graph = [[] for _ in range(n+1)]
+    for u, v, w in edges:
+        graph[u].append((v, w))
+        graph[v].append((u, w))
+    min_cost = float('inf')
+    min_cost_edges = []
+    min_cost_source = 0
+    for source in source_vertices:
+        dist = dijkstra(n, graph, source)
+        cost = 0
+        source_edges = []
+        for u in range(1, n+1):
+            for v, w in graph[u]:
+                if dist[u] + w == dist[v]:
+                    cost += w
+                    source_edges.append((u, v))
+        if cost < min_cost:
+            min_cost = cost
+            min_cost_edges = source_edges
+            min_cost_source = source
+    print("Edges of the partial graph with minimum total cost:")
+    for u, v in min_cost_edges:
+        print(f"{u}-{v}")
+    print("Most important source vertex:", min_cost_source)
+    print("Number of vertices reachable from the source:", len(set([v for u, v in min_cost_edges])))
+
+file_name = "graf.in"
+main(file_name)
+
+
+
+3.
+	Propuneți un algoritm bazat pe algoritmul Ford-Fulkerson / Edmonds Karp pentru rezolvarea următoarei probleme.
+Într-un restaurant sunt n mese numerotate 1,...,n sunt și m ospătari numerotați 1,..., m.
+Proprietarul restaurantului urmează să aibă un eveniment în restaurant și dorește să repartizeze fiecărui ospătar mesele de care trebuie să se ocupe. 
+El întreabă pe fiecare ospătar la ce mese ar vrea să servească, altfel că pentru fiecare ospătar j știe lista meselor pe care le preferă.
+Proprietarul ar vrea ca la fiecare masă să fie exact k ospătari și un ospătar să servească la cel mult p mese și ar vrea să respecte și preferințele ospătarilor legate de mese.
+Scrieți un program care, dacă este posibilă o distribuție a ospătarilor la mese care să respecte dorințele proprietarului, cu cel mult o excepție și anume o masă la care să fie doar k-1 ospătari, să afișeze o astfel de distribuție sub forma prezentată în exemplul de mai jos (perechi masa ospătar). 
+Altfel se va afișa mesajul “imposibil”
+Datele despre restaurant și opțiunile ospătarilor se vor citi dintr-un fișier cu următoarea structură:
+- pe prima linie sunt numerele naturale n, m, k, p
+- pe următoarele m linii sunt numere naturale, pe linia a j-a din cele m fiind numărul de mese la care vrea să servească ospătarul j și care sunt indicii acestor mese
+Complexitate O(n2m2) 
+
+
+
+from collections import defaultdict
+from queue import Queue
+
+def BFS(C, F, s, t):
+    n = len(C)
+    visited = [False] * n
+    visited[s] = True
+    q = Queue()
+    q.put(s)
+    parent = [-1] * n
+    while not q.empty():
+        u = q.get()
+        for v in range(n):
+            if not visited[v] and C[u][v] - F[u][v] > 0:
+                q.put(v)
+                visited[v] = True
+                parent[v] = u
+    return parent
+
+def max_flow(C, s, t):
+    n = len(C)
+    F = [[0 for _ in range(n)] for _ in range(n)]
+    while True:
+        parent = BFS(C, F, s, t)
+        if parent[t] == -1:
+            break
+        flow = float("Inf")
+        v = t
+        while v != s:
+            u = parent[v]
+            flow = min(flow, C[u][v] - F[u][v])
+            v = u
+        v = t
+        while v != s:
+            u = parent[v]
+            F[u][v] += flow
+            F[v][u] -= flow
+            v = u
+    return F
+
+def assign_waiters(n, m, k, p, preferences):
+    C = [[0 for _ in range(n + m + 2)] for _ in range(n + m + 2)]
+    s = 0
+    t = n + m + 1
+    for i in range(1, n+1):
+        C[s][i] = k
+    for i in range(1, m+1):
+        C[i+n][t] = p
+    for i in range(1, m+1):
+        for j in preferences[i]:
+            C[j][i+n] = 1
+    F = max_flow(C, s, t)
+    for i in range(1, n+1):
+        for j in range(1, m+1):
+            if F[i][j+n] == 1:
+                print("Waiter", j, "at table", i)
+
+def read_data(file_name):
+    with open(file_name) as f:
+        n, m, k, p = map(int, f.readline().split())
+        preferences = defaultdict(list)
+        for i in range(m):
+            line = f.readline().split()
+            m = int(line[0])
+            for j in range(1, m+1):
+                preferences[i+1].append(int(line[j]))
+    return n, m, k, p, preferences
+
+if __name__ == "__main__":
+    file_name = "restaurant.in"
+    n, m, k, p, preferences = read_data(file_name)
+    assign_waiters(n, m, k, p, preferences)
+
+
+
+
+4.
+Se citesc informații despre un graf neorientat ponderat conex G din fișierul graf.in. 
+Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de muchii m ale grafului, m>n
+- pe următoarele m linii sunt câte 3 numere pozitive reprezentând extremitatea inițială, extremitatea finală și costul unei muchii din graf 
+a) Să se afișeze costul unui arbore parțial de cost minim în G. Complexitate O(mlog(n)).
+b) Se citesc de la tastatură două muchii noi date tot prin extremitatea inițială, extremitatea finală și cost. 
+Știind că doar una dintre aceste muchii se va adăuga la graful G, decideți pe care o adăugați astfel încât noul graf să aibă un arbore parțial de cost minim cu cost cât mai mic și afișați muchiile unui arbore parțial de cost minim în acest graf. Complexitate O(n) 
+
+
+
+import heapq
+
+def prim(n, m, edges):
+    # Create a priority queue for storing edges
+    priority_queue = [(0, 0, 0)]
+    # Create a set for storing the vertices in the mst
+    mst_vertices = set()
+    # Create a list for storing the edges in the mst
+    mst_edges = []
+
+    while priority_queue:
+        # Pop the edge with the lowest weight
+        weight, start, end = heapq.heappop(priority_queue)
+        # If the edge is not already in the mst
+        if end not in mst_vertices:
+            # Add the edge to the mst
+            mst_edges.append((start, end, weight))
+            mst_vertices.add(end)
+            # Add all the edges connected to the new vertex to the priority queue
+            for i in range(m):
+                if edges[i][0] == end and edges[i][1] not in mst_vertices:
+                    heapq.heappush(priority_queue, (edges[i][2], edges[i][0], edges[i][1]))
+                elif edges[i][1] == end and edges[i][0] not in mst_vertices:
+                    heapq.heappush(priority_queue, (edges[i][2], edges[i][1], edges[i][0]))
+
+	        # Compute the total weight of the minimum cost partial tree
+    	    total_weight = sum([edge[2] for edge in mst_edges])
+            return total_weight, mst_edges
+
+def find_best_edge(n, m, edges, new_edges):
+    # Compute the minimum cost partial tree of the original graph
+    original_weight, original_mst = prim(n, m, edges)
+    # Initialize the minimum weight and edge to add as None
+    min_weight = None
+    best_edge = None
+    # Iterate through the new edges
+    for new_edge in new_edges:
+        # Check if adding the edge creates a cycle
+        if new_edge in original_mst or (new_edge[1], new_edge[0], new_edge[2]) in original_mst:
+            continue
+        # Copy the original edges and add the new edge
+        updated_edges = edges.copy()
+        updated_edges.append(new_edge)
+        # Compute the minimum cost partial tree of the updated graph
+        updated_weight, updated_mst = prim(n, m+1, updated_edges)
+        # Update the minimum weight and best edge if a better one is found
+        if min_weight is None or updated_weight < min_weight:
+            min_weight = updated_weight
+            best_edge = new_edge
+    return min_weight, best_edge, updated_mst
+
+def main():
+    # Read the graph information from the file
+    with open("graf.in", "r") as file:
+
+
+
+
+5.
+
+Se dă un graf neorientat cu n>3 vârfuri și m muchii care nu este bipartit.
+a) Să se determine un ciclu elementar impar în graf (cu număr impar de muchii). Se vor afișa muchiile unui astfel de ciclu. Complexitate O(n+m)
+b) Să se determine dacă în grad mai există în graf un alt ciclu în afară de cel afișat la punctul 
+a) (nu neapărat impar) și, în caz afirmativ, să se afișeze un astfel de ciclu (diferit de cel de la a)); altfel se va afișa un mesaj corespunzător. Complexitate O(n+m)
+Informațiile despre graf se citesc din fișierul graf.in cu structura:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitățile unei muchii 
+
+
+a) def find_odd_cycle(graph, n, m):
+    def dfs(v, parent):
+        for neighbor in graph[v]:
+            if neighbor == parent:
+                continue
+            elif neighbor in path:
+                path_index = path.index(neighbor)
+                cycle = path[path_index:] + [neighbor]
+                if len(cycle) % 2 != 0:
+                    return cycle
+            else:
+                path.append(neighbor)
+                result = dfs(neighbor, v)
+                if result:
+                    return result
+                path.pop()
+ 
+    for v in range(n):
+        path = [v]
+        result = dfs(v, -1)
+        if result:
+            return result
+    return None
+
+# Example usage:
+n, m = map(int, input().split())
+graph = [[] for _ in range(n)]
+for _ in range(m):
+    u, v = map(int, input().split())
+    graph[u].append(v)
+    graph[v].append(u)
+cycle = find_odd_cycle(graph, n, m)
+if cycle:
+    print("Found an odd cycle:", cycle)
+else:
+    print("No odd cycle found.")
+
+
+b)
+def find_other_cycle(graph, n, m, odd_cycle):
+    def dfs(v, parent):
+        for neighbor in graph[v]:
+            if neighbor == parent:
+                continue
+            elif neighbor in path:
+                path_index = path.index(neighbor)
+                cycle = path[path_index:] + [neighbor]
+                if cycle != odd_cycle:
+                    return cycle
+            else:
+                path.append(neighbor)
+                result = dfs(neighbor, v)
+                if result:
+                    return result
+                path.pop()
+    visited = [False] * n
+    for vertex in odd_cycle:
+        visited[vertex] = True
+    for v in range(n):
+        if not visited[v]:
+            path = [v]
+            result = dfs(v, -1)
+            if result:
+                return result
+    return None
+
+# Example usage:
+n, m = map(int, input().split())
+graph = [[] for _ in range(n)]
+for _ in range(m):
+    u, v = map(int, input().split())
+    graph[u].append(v)
+    graph[v].append(u)
+
+odd_cycle = find_odd_cycle(graph, n, m)
+if odd_cycle:
+print("Found an odd cycle:", odd_cycle)
+other_cycle = find_other_cycle(graph, n, m, odd_cycle)
+if other_cycle:
+print("Found another cycle:", other_cycle)
+else:
+print("No other cycle found.")
+else:
+print("No odd cycle found.")
+
+
+
+
+
+6.
+Propuneți un algoritm bazat pe algoritmul Ford-Fulkerson / Edmonds Karp pentru rezolvarea următoarei probleme.
+Într-un restaurant sunt n mese numerotate 1,...,n sunt și m ospătari numerotați 1,..., m (mn).
+Proprietarul restaurantului urmează să aibă un eveniment în restaurant și dorește să repartizeze fiecărui ospătar mesele de care trebuie să se ocupe. 
+El întreabă pe fiecare ospătar la câte mese ar vrea să servească maxim și notează cu o1,..,om răspunsurile acestora.
+Proprietarul ar vrea ca la fiecare masa i să fie exact ki ospătari și ar vrea ca numărul de mese la care repartizează un ospătar i să nu depășească opțiunea acestuia oi. 
+Scrieți un program care, dacă este posibilă o distribuție a ospătarilor la mese care să respecte dorințele proprietarului, să afișeze o astfel de distribuție sub forma prezentată în exemplul de mai jos. Altfel se va afișa mesajul “imposibil”
+Datele despre restaurant și opțiunile ospătarilor se vor citi dintr-un fișier cu următoarea structură:
+- pe prima linie sunt numerele naturale n, m
+- pe următoarea linie n numere naturale k1, …, kn reprezentând câți ospătari trebuie să fie la fiecare masă
+- pe următoarea linie m numere naturale o1…om reprezentând opțiunile ospătarilor.
+Complexitate O(n2m2)
+
+
+import queue
+
+def edmonds_karp(graph, source, sink):
+    n = len(graph)
+    flow = 0
+    while True:
+        parent = [-1] * n
+        parent[source] = -2
+        q = queue.Queue()
+        q.put(source)
+        while not q.empty() and parent[sink] == -1:
+            u = q.get()
+            for v in range(n):
+                if parent[v] == -1 and graph[u][v] > 0:
+                    parent[v] = u
+                    q.put(v)
+        if parent[sink] == -1:
+            break
+        path_flow = float("Inf")
+        v = sink
+        while v != source:
+            u = parent[v]
+            path_flow = min(path_flow, graph[u][v])
+            v = u
+        flow += path_flow
+        v = sink
+        while v != source:
+            u = parent[v]
+            graph[u][v] -= path_flow
+            graph[v][u] += path_flow
+            v = u
+    return flow
+
+def assign_waiters(n, m, k, o):
+    graph = [[0 for _ in range(n + m + 2)] for _ in range(n + m + 2)]
+    source = n + m
+    sink = n + m + 1
+    for i in range(n):
+        graph[source][i] = k[i]
+    for i in range(m):
+        graph[i + n][sink] = o[i]
+    for i in range(n):
+        for j in range(m):
+            graph[i][j + n] = 1
+    flow = edmonds_karp(graph, source, sink)
+    if flow == sum(k):
+        assignments = [[] for _ in range(m)]
+        for i in range(n):
+            for j in range(m):
+                if graph[j + n][i] == 1:
+                    assignments[j].append(i)
+        return assignments
+    else:
+        return "impossible"
+
+# Example usage:
+n, m = map(int, input().split())
+k = list(map(int, input().split()))
+o = list(map(int, input().split()))
+assignments = assign_waiters(n, m, k, o)
+if assignments == "impossible":
+print("impossible")
+else:
+for i, tables in enumerate(assignments):
+print("Waiter", i + 1, "is assigned to tables", tables)
+
+
+
+7.
+Se dă un graf neorientat cu n>3 vârfuri și m muchii și un vârf s.
+a) Adăugați la G un număr minim de muchii astfel încât să devină conex. Construiți în memorie și afișați pe ecran listele de adiacență ale grafului astfel obținut. Complexitate O(n+m)
+b) Determinați excentricitatea ecc(s) a vârfului s în noul graf G1 obținut la a): 
+ecc(s) = max(d(s,v)| v vârf în G1} unde d(s,v) este distanța de la s la v.
+Complexitate O(n+m)
+Informațiile despre graf se citesc din fișierul graf.in cu structura:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitățile unei muchii 
+- pe ultima linie este vârful s
+
+
+from collections import defaultdict
+
+def bfs(graph, start):
+    visited = [False] * len(graph)
+    queue = [start]
+    visited[start] = True
+    while queue:
+        vertex = queue.pop(0)
+        for neighbor in graph[vertex]:
+            if not visited[neighbor]:
+                queue.append(neighbor)
+                visited[neighbor] = True
+    return visited
+
+def add_edges(graph, n):
+    for i in range(n):
+        for j in range(i+1, n):
+            if not graph[i][j]:
+                graph[i][j] = 1
+                graph[j][i] = 1
+
+def min_connect(n, m, edges, s):
+    graph = [[0 for _ in range(n)] for _ in range(n)]
+    for edge in edges:
+        a, b = edge
+        graph[a][b] = 1
+        graph[b][a] = 1
+    visited = bfs(graph, s)
+    if not all(visited):
+        add_edges(graph, n)
+    adjacency_lists = defaultdict(list)
+    for i in range(n):
+        for j in range(n):
+            if graph[i][j]:
+                adjacency_lists[i].append(j)
+    return adjacency_lists
+
+def eccentricity(graph, start):
+    distances = [-1] * len(graph)
+    distances[start] = 0
+    queue = [start]
+    while queue:
+        vertex = queue.pop(0)
+        for neighbor in graph[vertex]:
+            if distances[neighbor] == -1:
+                distances[neighbor] = distances[vertex] + 1
+                queue.append(neighbor)
+    return max(distances)
+
+if __name__ == "__main__":
+    n, m = list(map(int, input().split()))
+    edges = [tuple(map(int, input().split())) for _ in range(m)]
+    s = int(input())
+    graph = min_connect(n, m, edges, s)
+    print("Adjacency lists of the graph: ", graph)
+    ecc_s = eccentricity(graph, s)
+    print("Eccentricity of vertex s: ", ecc_s)
+
+
+
+8.
+Se citesc informații despre un graf orientat ponderat fără circuite G din fișierul graf.in. 
+Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de arce m ale grafului, m>n
+- pe următoarele m linii sunt câte 3 numere întregi reprezentând extremitatea inițială, extremitatea finală și costul unui arc din graf (costul poate fi și negativ)
+- pe următoarea linie (a (m+2)-a linie) din fișier este un număr natural k (0<k<n) reprezentând numărul de vârfuri sursă; vârfurile sursă din G vor fi 1, 2, ... , k
+- pe ultima linie a fișierului sunt două vârfuri t1 și t2, reprezentând vârfurile destinație ale grafului (distincte de vârfurile sursă din G).
+Notăm cu S ={1,…,k} mulțimea vârfurilor sursă din G și cu T={t1,t2} mulțimea vârfurilor destinație din G. Spunem că un vârf y este accesibil din x în G dacă există un drum de la x la y. Presupunem că există cel puțin un vârf destinație care este accesibil dintr-un vârf sursă.
+a) Să se verifice dacă graful dat este fără circuite și să se afișeze un mesaj corespunzător.
+b) Să se determine distanța între cele două mulțimi S și T:
+d(S, T) = min {d(x, y) | x ∈ S, y ∈ T}
+Să se determine în plus și o pereche de vârfuri (s,t) cu sS și tT cu 
+d(s,t) = d(S,T) = min {d(x, y) | x ∈ S, y ∈ T} și să se afișeze (pe ecran) un drum minim de la s la t. Complexitate O(m)
+
+
+
+
+import sys
+from collections import defaultdict, deque
+
+def read_graph():
+    n, m = map(int, input().split())
+    graph = defaultdict(list)
+    for _ in range(m):
+        u, v, w = map(int, input().split())
+        graph[u].append((v, w))
+    k = int(input())
+    sources = set(range(1, k+1))
+    t1, t2 = map(int, input().split())
+    destinations = {t1, t2}
+    return graph, sources, destinations
+
+def check_circuits(graph):
+    visited = defaultdict(lambda: False)
+    for u in graph:
+        if not visited[u]:
+            stack = [u]
+            while stack:
+                v = stack[-1]
+                if not visited[v]:
+                    visited[v] = True
+                    for neighbor, _ in graph[v]:
+                        stack.append(neighbor)
+                else:
+                    stack.pop()
+                    for neighbor, _ in graph[v]:
+                        if not visited[neighbor]:
+                            print("Graph contains a circuit")
+                            return
+    print("Graph is free of circuits")
+
+def shortest_path(graph, sources, destinations):
+    distance = defaultdict(lambda: sys.maxsize)
+    for s in sources:
+        distance[s] = 0
+    q = deque()
+    for s in sources:
+	q.append(s)
+	while q:
+		u = q.popleft()
+	for v, w in graph[u]:
+		if distance[u] + w < distance[v]:
+			distance[v] = distance[u] + w
+			q.append(v)
+			d_min = sys.maxsize
+			pair = None
+	for s in sources:
+		for t in destinations:
+			if distance[s] + graph[s][t][1] < d_min:
+				d_min = distance[s] + graph[s][t][1]
+				pair = (s, t)
+				print("Shortest distance between sets S and T:", d_min)
+				print("Shortest path from s to t:", pair)
+
+graph, sources, destinations = read_graph()
+check_circuits(graph)
+shortest_path(graph, sources, destinations)
+
+
+
+9.
+Propuneți un algoritm bazat pe algoritmul Ford-Fulkerson / Edmonds Karp pentru rezolvarea următoarei probleme.
+Fișierul graf.in conține următoarele informații despre un graf bipartit conex cu V1={1,…,p} și V2={p+1,…,n}:
+- pe prima linie sunt 2 numere naturale n și m reprezentând numărul de vârfuri și numărul de muchii
+- pe a doua linie este p
+- pe următoarele m linii sunt perechi de numere x y (separate prin spațiu) reprezentând extremitățile unei muchii, x ∈ V1 și y ∈V2.
+Scrieți un program care citește datele despre graful G din fișierul graf.in și afișează:
+a) Un cuplaj de cardinal k în G, cu k citit de la tastatură. Dacă nu există un astfel de cuplaj se va afișa mesajul “nu exista” Complexitate O(km)
+b) Muchiile unui 2-factor în G, dacă există (2-factor = graf parțial în care toate vârfurile au gradul 2) Complexitate O(nm)
+
+
+
+import sys
+from collections import deque
+
+# read data from graf.in file
+with open('graf.in', 'r') as f:
+    n, m = map(int, f.readline().split())
+    p = int(f.readline())
+    edges = []
+    for _ in range(m):
+        x, y = map(int, f.readline().split())
+        edges.append((x, y))
+
+# function to check if there is a coupling of cardinal k in G
+def check_coupling(k):
+    # create a residual graph
+    res = [[0 for _ in range(n+1)] for _ in range(n+1)]
+    for x, y in edges:
+        res[x][y] = 1
+
+    # initialize variables
+    vis = [False for _ in range(n+1)]
+    q = deque()
+    match = [-1 for _ in range(n+1)]
+    flow = 0
+
+    # loop through all vertices in V1
+    for i in range(1, p+1):
+        # check if there is a flow from i to match[i]
+        if match[i] == -1:
+            # initialize queue and add i to it
+            q.append(i)
+            vis[i] = True
+
+            # run BFS
+            while len(q) > 0:
+                u = q.popleft()
+
+                # loop through all neighbors of u
+                for v in range(p+1, n+1):
+                    # check if there is an edge between u and v and v is not visited
+                    if res[u][v] > 0 and not vis[v]:
+                        vis[v] = True
+                        q.append(v)
+                        if match[v] == -1:
+                            match[v] = u
+                            flow += 1
+                            if flow == k:
+                                return True
+    if flow < k:
+        return False
+    else:
+        return True
+
+# get k from user input
+k = int(input("Enter the value of k: "))
+
+# check if there is a coupling of cardinal k in G
+if check_coupling(k):
+    print("A coupling of cardinal", k, "exists in G.")
+else:
+    print("A coupling of cardinal", k, "does not exist in G.")
+
+# function to check if there is a 2-factor in G
+def check_2factor():
+    # create a residual graph
+    res = [[0 for _ in range(n+1)] for _ in range(n+1)]
+    for x, y in edges:
+        res[x][y] = 1
+
+    # initialize variables
+    vis = [False for _ in range(n+1)]
+    q = deque()
+    match = [-1 for _ in range(n+1)]
+    flow = 0
+
+    # loop through all vertices in V1
+    for i in range(1, p+1):
+        # check if there is a flow from i to match[i]
+        if match[i] == -1:
+            # initialize queue and add i to it
+            q.append(i)
+	    vis[i] = True
+		        # run BFS
+            while len(q) > 0:
+                u = q.popleft()
+
+            # loop through all neighbors of u
+           	 for v in range(p+1, n+1):
+                   # check if there is an edge between u and v and v is not visited
+                     if res[u][v] > 0 and not vis[v]:
+                         vis[v] = True
+                         q.append(v)
+                         if match[v] == -1:
+                             match[v] = u
+                             flow += 1
+if flow == p:
+    print("A 2-factor exists in G.")
+    print("Edges of the 2-factor:")
+    for i in range(1, p+1):
+        print(i, "-->", match[i])
+else:
+    print("A 2-factor does not exist in G.")
+
+check_2factor()
+
+
+
+10.
+Se dă un arbore ponderat T cu n>3 vârfuri și un vârf s. 
+Informațiile despre arbore se citesc din fișierul graf.in cu structura:
+- pe prima linie este n
+- pe următoarele n linii sunt listele de adiacență ale lui G; linia i începe cu gradul vârfului i și apoi conține vecinii vârfului i, fiecare vecin fiind urmat de costul muchiei:
+<grad> <vecin1> <cost_muchie_de_la_i_la_vecin1> <vecin2><cost_muchie_de_la_i_la_vecin2> etc
+- pe ultima linie este vârful s (vârfurile sunt numerotate de la 1)
+Pentru un lanț P în T definim capacitatea lanțului P ca fiind capacitatea minimă a unei muchii din P.
+a) Să se afișeze pentru fiecare vârf v capacitatea unicului lanț elementar de la s la v (sub forma v: capacitate lanț) Complexitate O(n)
+b) Să se afișeze care este capacitatea minimă a unui lanț cu o extremitate în s și să se afișeze un astfel de lanț
+
+
+
+# function to get the minimum capacity of the chain from s to v
+def get_chain_capacity(s, v, parent, capacity):
+    if parent[v] == -1:
+        return capacity[v]
+    return min(capacity[v], get_chain_capacity(s, parent[v], parent, capacity))
+
+# function to get the minimum capacity of a chain with an end in s
+def get_min_chain_capacity(s, parent, capacity):
+    min_cap = float('inf')
+    min_chain = []
+    for v in range(1, n+1):
+        if v != s:
+            cap = get_chain_capacity(s, v, parent, capacity)
+            if cap < min_cap:
+                min_cap = cap
+                min_chain = [v]
+            elif cap == min_cap:
+                min_chain.append(v)
+    return min_cap, min_chain
+
+# read data from graf.in file
+with open('graf.in', 'r') as f:
+    n = int(f.readline())
+    adj_list = [[] for _ in range(n+1)]
+    capacity = [0 for _ in range(n+1)]
+    for i in range(1, n+1):
+        data = list(map(int, f.readline().split()))
+        degree = data[0]
+	for j in range(1, degree*2 + 1, 2):
+            adj_list[i].append(data[j])
+            capacity[i] = min(capacity[i], data[j+1])
+    s = int(f.readline())
+
+# perform BFS from s to find the parent of each vertex
+vis = [False for _ in range(n+1)]
+parent = [-1 for _ in range(n+1)]
+queue = [s]
+vis[s] = True
+while len(queue) > 0:
+    u = queue.pop(0)
+    for v in adj_list[u]:
+        if not vis[v]:
+            vis[v] = True
+            parent[v] = u
+            queue.append(v)
+
+# get the minimum capacity of the chain from s to each vertex
+for v in range(1, n+1):
+    if v != s:
+        print(v, ":", get_chain_capacity(s, v, parent, capacity))
+
+# get the minimum capacity of a chain with an end in s
+min_cap, min_chain = get_min_chain_capacity(s, parent, capacity)
+print("Minimum capacity of a chain with an end in", s, "is", min_cap)
+print("Chain(s) with minimum capacity:", min_chain)
+
+
+
+11.
+Propuneți un algoritm bazat pe algoritmul Ford-Fulkerson / Edmonds Karp pentru rezolvarea următoarei probleme.
+Pentru n proiecte, numerotate 1,..., n s-au înscris m studenți numerotați 1,..,m, fiecare student depunând o listă de opțiuni cu proiectele la care vrea să participe.
+a) Dat un număr k de la tastatură, să de determine o listă de k asocieri proiect – student prin care k studenți diferiți sunt asociați la k proiecte diferite Complexitate O(km)
+b) Să se determine, dacă există, o modalitatea de a asocia toți studenții la proiecte astfel încât un student să fie asociat la exact 2 proiecte, iar la un proiect să fie asociați exact 2 studenți și să se afișeze o astfel de modalitate sub forma prezentată în exemplul de mai jos. Altfel se va afișa mesajul “nu este posibil”. Complexitate O(nm)
+Datele despre proiecte și studenți se vor citi dintr-un fișier cu următoarea structură:
+- pe prima linie sunt numerele naturale n și m
+- pe următoarele linii sunt perechi de numere naturale i j cu i∈{1,…, n} și j∈{1,…, m} cu semnificația: studentul j s-a înscris la proiectul i.
+
+
+import collections
+from queue import Queue
+
+def fordFulkerson(graph, src, tgt, n, m):
+    parent = [-1] * (n + m + 2)
+    max_flow = 0
+
+    while bfs(graph, src, tgt, parent, n, m):
+        path_flow = float("Inf")
+        s = tgt
+        while s != src:
+            path_flow = min(path_flow, graph[parent[s]][s])
+            s = parent[s]
+
+        max_flow += path_flow
+        v = tgt
+        while v != src:
+            u = parent[v]
+            graph[u][v] -= path_flow
+            graph[v][u] += path_flow
+            v = parent[v]
+
+    return max_flow
+
+def bfs(graph, src, tgt, parent, n, m):
+    visited = [False] * (n + m + 2)
+    queue = Queue()
+    queue.put(src)
+    visited[src] = True
+
+    while not queue.empty():
+        u = queue.get()
+        for ind, val in enumerate(graph[u]):
+            if visited[ind] == False and val > 0:
+                queue.put(ind)
+                visited[ind] = True
+                parent[ind] = u
+
+    return visited[tgt]
+
+def determine_k_associations(n, m, k):
+    src = n + m
+    tgt = n + m + 1
+
+    graph = [[0 for _ in range(n + m + 2)] for _ in range(n + m + 2)]
+
+    # Create edges from source to projects
+    for i in range(n):
+        graph[src][i] = k
+
+    # Create edges from students to sink
+    for j in range(m):
+        graph[j + n][tgt] = 1
+
+    # Create edges from projects to students
+    for j in range(m):
+        for i in range(n):
+            if student_enrolled_in_project(j, i):
+                graph[i][j + n] = 1
+
+    max_flow = fordFulkerson(graph, src, tgt, n, m)
+
+    # Print the k project-student associations
+    for i in range(n):
+        for j in range(m):
+            if graph[i][j + n] == 1:
+                print("Student", j, "is associated with Project", i)
+
+def determine_associations(n, m):
+    src = n + m
+    tgt = n + m + 1
+
+    graph = [[0 for _ in range(n + m + 2)] for _ in range(n + m + 2)]
+
+    # Create edges from source to projects
+    for i in range(n):
+        graph[src][i] = 2
+
+    # Create edges from students to sink
+    for j in range(m):
+        graph[j + n][tgt] = 2
+
+    # Create edges from projects to students
+    for j in range(m):
+        for i in range(n):
+            if student_enrolled_in_project(j, i):
+                graph[i][j+n] = 1
+
+     max_flow = fordFulkerson(graph, src, tgt, n, m)
+
+     if max_flow == m:
+     # Print the associations
+         for i in range(n):
+             for j in range(m):
+                 if graph[i][j + n] == 1:
+                     print("Student", j, "is associated with Project", i)
+      else:
+           print("Not possible")
+
+def determine_associations(n, m):
+      src = n + m
+      tgt = n + m + 1
+      graph = [[0 for _ in range(n + m + 2)] for _ in range(n + m + 2)]
+
+      # Create edges from source to projects
+      for i in range(n):
+          graph[src][i] = 2
+
+      # Create edges from students to sink
+      for j in range(m):
+          graph[j + n][tgt] = 2
+
+       # Create edges from projects to students
+       for j in range(m):
+            for i in range(n):
+                 if student_enrolled_in_project(j, i):
+                      graph[i][j + n] = 1
+
+       max_flow = fordFulkerson(graph, src, tgt, n, m)
+
+       if max_flow == m * 2:
+           # Print the associations
+           for i in range(n):
+               for j in range(m):
+                   if graph[i][j + n] == 1:
+                       print("Student", j, "is associated with Project", i) 
+       else:
+            print("Not possible")
+
+
+def student_enrolled_in_project(student, project):
+"""
+Function to check if a student is enrolled in a project by reading from 'graf.in' file.
+"""
+    enrolled = []
+    with open("graf.in") as f:
+        n, m = map(int, f.readline().split())
+        for line in f:
+             enrolled.append(tuple(map(int, line.split())))
+             return (project, student) in enrolled
+
+"""example""""
+
+n, m = 4, 4
+k = 2
+determine_k_associations(n, m, k)
+determine_associations(n, m)
+           
+
+
+--------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------------------------------------------------------------------------------------------------------------
+----------------------------------------Exercitii SEP----------------------------------------
+
+
+
+1.
+Un șoricel se află într-un labirint și vrea să ajungă la prietenul său.
+Labirintul este reprezentat printr-o matrice cu m linii și n coloane numerotate de la 1, cu elementele codificate 0 sau 1 astfel: 0 = celulă liberă, în care șoricelul se poate deplasa, 1 = perete. Șoricelul se poate deplasa în oricare dintre celulele vecine libere din N, NV, NE, S, SE, SV, E sau V.
+Se dau următoarele date despre labirint în fișierul labirint.in:
+- pe prima linie sunt m și n
+- pe următoarele m linii sunt elementele de pe cele m linii ale matricei (o linie din fișier reprezintă o linie din matrice)
+- pe penultima linie sunt două numere x1, y1 reprezentând linia și coloana celulei în care se află inițial șoricelul
+- pe ultima linie sunt patru numere xc1, yc1, xc2, yc2 cu următoarea semnificație: (xc1, yc1) și (xc2, yc2) sunt celule în care se află capcane pentru șoricei.
+Șoricelul ar vrea să ajungă să iasă din labirint printr-o celulă liberă de pe prima linie, ocolind cel puțin una dintre cele două capcane din labirint (șoricelul este suficient de abil ca să treacă printr-o celulă cu capcană, dar nu prin două) . 
+Să se afișeze, dacă există, un traseu al șoricelului din poziția în care se află (x1, y1) la o celulă liberă de pe prima linie, care trece prin cel mult unul dintre punctele (xc1, yc1) și (xc2, yc2).
+Complexitate O(mn)
+
+
+def find_path(maze, start, end, traps):
+    # Helper function to check if a given cell is valid
+    def is_valid(x, y):
+        if x < 0 or x >= len(maze) or y < 0 or y >= len(maze[0]):
+            return False
+        if maze[x][y] == 1 or (x, y) in visited:
+            return False
+        return True
+
+    # Helper function to find the path using DFS
+    def dfs(x, y, count):
+        if x == end[0] and y == end[1]:
+            return True
+        for dx, dy in [(0, 1), (1, 0), (0, -1), (-1, 0)]:
+            if is_valid(x+dx, y+dy):
+                if (x+dx, y+dy) in traps:
+                    if count == 1:
+                        continue
+                    if dfs(x+dx, y+dy, count+1):
+                        path.append((x+dx, y+dy))
+                        return True
+                else:
+                    if dfs(x+dx, y+dy, count):
+                        path.append((x+dx, y+dy))
+                        return True
+        return False
+
+    path = []
+    visited = set()
+    if dfs(start[0], start[1], 0):
+        path.append(start)
+        return path[::-1]
+    return None
+
+# Reading input file
+with open("labyrinth.in") as f:
+    m, n = map(int, f.readline().split())
+    maze = [[int(x) for x in line.split()] for line in f]
+    start = tuple(map(int, f.readline().split()))
+    traps = [tuple(map(int, line.split())) for line in f]
+
+path = find_path(maze, start, (0, 0), traps)
+if path:
+    print(path)
+else:
+    print("No path found.")
+
+
+
+
+
+
+2.
+În fișierul retea.in se dau următoarele informații despre un graf neorientat conex ponderat cu n noduri numerotare 1,2, ..., n reprezentând o rețea de comunicare:
+- pe prima linie se dau două numere n și m, unde n reprezintă numărul de noduri iar m numărul de muchii
+- pe următoarele m linii sunt câte 3 numere i, j și k cu semnificația: între nodurile i și j există o muchie (legătură) de cost k
+Într-un graf nu există redundanță în comunicare dacă între orice două noduri există un unic lanț elementar. Dorim să eliminăm redundanțele în comunicare eliminând muchii din graf, astfel încât costul total al muchiilor eliminate să fie cât mai mic. Scrieți un program care determină o mulțime de muchii care pot fi eliminate din graf astfel 
+încât să se obțină un graf fără redundanță. Dacă există mai multe astfel de mulțimi se va afișa cea cu costul total (egal cu suma costurilor muchiilor) minim.
+Complexitate O(m log(n))
+
+
+
+def find_min_spanning_tree(n, edges):
+    # Helper function to find the root of a node in the disjoint set
+    def find_root(node):
+        if parent[node] != node:
+            parent[node] = find_root(parent[node])
+        return parent[node]
+
+    # Helper function to merge two disjoint sets
+    def union(a, b):
+        a_root = find_root(a)
+        b_root = find_root(b)
+        if a_root != b_root:
+            parent[a_root] = b_root
+
+    # Sort edges by weight
+    edges.sort(key=lambda x: x[2])
+    parent = [i for i in range(n+1)]
+    mst = []
+    for edge in edges:
+        u, v, w = edge
+        if find_root(u) != find_root(v):
+            union(u, v)
+            mst.append(edge)
+    return mst
+
+# Reading input file
+with open("retea.in") as f:
+    n, m = map(int, f.readline().split())
+    edges = [tuple(map(int, line.split())) for line in f]
+
+mst = find_min_spanning_tree(n, edges)
+removable_edges = [edge for edge in edges if edge not in mst]
+
+print("Removable edges:", removable_edges)
+print("Total cost:", sum(edge[2] for edge in removable_edges))
+
+
+
+
+
+3.
+Se dau următoarele date despre o rețea de transport în fișierul retea.in:
+- pe prima linie sunt numărul de noduri n și numărul de arce m
+- pe următoarele m linii sunt câte 3 numere naturale reprezentând extremitatea inițială, extremitatea finală și capacitatea unui arc 
+- pe ultima linie sunt două numere naturale s și t reprezentând sursa și destinația
+Se citește de la tastatură un număr natural k. 
+a) Să se afișeze, dacă există, un flux în rețea de valoare egală cu k
+b) Să se determine dacă există în rețea o s-t tăietură de capacitate mai mică sau egală cu k și, în caz afirmativ, să se afișeze o astfel de tăietură (arcele ei directe, ca în exemple).                            
+Complexitate O(km)
+
+
+def find_flow(n, m, arcs, s, t, k):
+    # Initialize the residual graph with capacities
+    res = [[0] * n for _ in range(n)]
+    for i in range(m):
+        u, v, c = arcs[i]
+        res[u][v] = c
+    
+    # Initialize the flow to 0
+    flow = 0
+    
+    # Create a list to store the visited nodes
+    visited = [False] * n
+    
+    # Create a list to store the parent nodes
+    parent = [-1] * n
+    
+    # Create a list to store the capacity of the path
+    path_flow = [float("Inf")] * n
+    
+    # Find a path from s to t in the residual graph
+    while bfs(res, s, t, visited, parent, path_flow):
+        # Update the flow
+        min_flow = path_flow[t]
+        flow += min_flow
+        
+        # Update the residual graph
+        v = t
+        while v != s:
+            u = parent[v]
+            res[u][v] -= min_flow
+            res[v][u] += min_flow
+            v = parent[v]
+        
+        # Check if the flow is equal to k
+        if flow == k:
+            break
+    
+    # Check if the flow is equal to k
+    if flow == k:
+        print("A network flow of value", k, "is found.")
+        return True
+    else:
+        print("No network flow of value", k, "is found.")
+        return False
+    
+def bfs(res, s, t, visited, parent, path_flow):
+    # Queue for BFS
+    q = []
+    for i in range(len(visited)):
+        visited[i] = False
+    # Enqueue the source
+    q.append(s)
+    visited[s] = True
+    path_flow[s] = float("Inf")
+    parent[s] = -1
+    while len(q) != 0:
+        u = q.pop(0)
+        for v in range(len(res)):
+            if visited[v] == False and res[u][v] > 0:
+                q.append(v)
+                visited[v] = True
+                path_flow[v] = min(path_flow[u], res[u][v])
+                parent[v] = u
+    # If we can not reach to the sink we return False else True
+    return visited[t] == True
+
+# Read data from the input file
+with open("retea.in", "r") as f:
+    n, m = map(int, f.readline().split())
+    arcs = [tuple(map(int, line.split())) for line in f]
+    s, t = map(int, f.readline().split())
+    k = int(input("Enter the value of k: "))
+
+# Find a network flow of value k
+find_flow(n, m, arcs, s, t, k)
+
+
+
+
+4.
+Un șoricel se află într-un labirint și vrea să ajungă la prietenul său.
+Labirintul este reprezentat printr-o matrice cu m linii și n coloane numerotate de la 1, cu elementele codificate 0 sau 1 astfel: 0 = celulă liberă, în care șoricelul se poate deplasa, 1 = perete. Șoricelul se poate deplasa în oricare dintre celulele vecine (alăturate) libere din N,S, E 
+sau V.
+Se dau următoarele date despre labirint în fișierul labirint.in:
+- pe prima linie sunt m și n
+- pe următoarele m linii sunt elementele de pe cele m linii ale matricei (o linie din fișier reprezintă o linie din matrice)
+- pe următoarea linie sunt două numere x1, y1 reprezentând linia și coloana celulei în care se află inițial șoricelul
+- pe penultima linie sunt două numere x2, y2 reprezentând linia și coloana celulei în care se află prietenul șoricelului
+- pe ultima linie două numere xc, yc reprezentând linia și coloana unei celule în care se află o bucățică de cașcaval
+Să se afișeze, dacă există, un traseu al șoricelului din poziția în care se află (x1, y1) la prietenul său din celula (x2, y2), trecând și prin celula cu bucățica de cașcaval (șoricelul ar vrea să o ia să o ducă prietenului său).
+Complexitate O(mn)
+
+
+
+def find_path(m, n, maze, start, end, cheese):
+    # Create a queue for BFS
+    q = []
+    # Create a 2D array to store the visited cells
+    visited = [[False] * n for _ in range(m)]
+    # Create a 2D array to store the parent cells
+    parent = [[None] * n for _ in range(m)]
+    # Enqueue the starting cell
+    q.append(start)
+    visited[start[0]][start[1]] = True
+    # Perform BFS
+    while len(q) != 0:
+        cur = q.pop(0)
+        # Check if the current cell is the destination cell
+        if cur == end:
+            print("Path found from", start, "to", end)
+            return True
+        # Check the neighboring cells
+        for dx, dy in [[1, 0], [-1, 0], [0, 1], [0, -1]]:
+            x, y = cur[0] + dx, cur[1] + dy
+            if 0 <= x < m and 0 <= y < n and maze[x][y] == 0 and not visited[x][y]:
+                q.append((x, y))
+                visited[x][y] = True
+                parent[x][y] = cur
+    print("No path found from", start, "to", end)
+    return False
+
+# Read data from the input file
+with open("labyrinth.in", "r") as f:
+    m, n = map(int, f.readline().split())
+    maze = [[int(x) for x in line.split()] for line in f]
+    start = tuple(map(int, f.readline().split()))
+    end = tuple(map(int, f.readline().split()))
+    cheese = tuple(map(int, f.readline().split()))
+
+# Find the path from the starting cell to the destination cell
+path_exists = find_path(m, n, maze, start, end, cheese)
+
+# Print the path
+if path_exists:
+    cur = end
+    while cur != start:
+        print(cur)
+        cur = parent[cur[0]][cur[1]]
+    print(cur)
+    print("The mouse passed through the cell with cheese:",cheese)
+
+
+
+
+
+5.
+În fișierul harta.in se dau următoarele informații despre o rețea turistică cu n orașe numerotare 1,2, ..., n și drumuri (legături) bidirecționale între acestea:
+- pe prima linie se dau două numere n și m, unde n reprezintă numărul de orașe iar m numărul de drumuri bidirecționale existente între orașe
+- pe următoarele m linii sunt câte 3 numere i, j și k cu semnificația: între orașele i și j există un drum bidirecțional de lungime k kilometri (ne putem deplasa pe acest drum și de la i la j și de la j la i)
+- pe ultima linie sunt un număr natural p și p numere reprezentând orașele turistice din rețea
+Un traseu în rețea este o succesiune de orașe cu proprietatea că între oricare două orașe alăturate din această succesiune există un drum (o legătură). Lungimea unui traseu este suma lungimilor drumurilor între orașe consecutive din traseu.
+Un călător se află în orașul s (s citit de la tastatură) și dorește să planifice călătorii one-cityonly. În fiecare călătorie el vrea să viziteze doar un oraș turistic t și să se întoarcă în orașul s (traseul său de la orașul s la orașul t poate trece prin alte orașe, dar călătorul nu se oprește să viziteze orașele de pe traseu, doar pe cel destinație). Călătorul ar vrea sa planifice cât mai multe astfel de călătorii (pentru a vizita cât mai multe orașe turistice din rețea), dar în total să nu parcurgă prea mulți kilometri, astfel că și-a propus ca suma totală a lungimilor traseelor parcurse în călătoriile sale să nu depășească o valoare b (cu b citit de la tastatură).
+Scrieți un program care determină numărul maxim de orașe turistice pe care le poate vizita călătorul făcând astfel de călătorii one-city-only pentru a se încadra în limita stabilită pentru numărul de kilometri parcurși și care afișează și aceste orașe, ca în exemplu.
+Complexitate O(m log(n))
+
+
+
+import heapq
+
+def find_shortest_paths(n, m, graph, start):
+    # Create a priority queue for Dijkstra's algorithm
+    pq = []
+    # Create an array to store the distances from the starting city to all other cities
+    dist = [float('inf')] * n
+    # Create an array to store the visited cities
+    visited = [False] * n
+    # Enqueue the starting city with distance 0
+    heapq.heappush(pq, (0, start))
+    dist[start] = 0
+    # Perform Dijkstra's algorithm
+    while len(pq) != 0:
+        cur_dist, cur = heapq.heappop(pq)
+        if not visited[cur]:
+            visited[cur] = True
+            for neighbor, weight in graph[cur]:
+                if dist[neighbor] > cur_dist + weight:
+                    dist[neighbor] = cur_dist + weight
+                    heapq.heappush(pq, (dist[neighbor], neighbor))
+    return dist
+
+def find_max_tourist_cities(n, dist, b, tourist_cities):
+    # Create an array to store the maximum number of tourist cities that can be visited while staying within the limit on the number of kilometers traveled
+    max_tourist_cities = [0] * (b + 1)
+    # Perform dynamic programming
+    for i in range(1, b + 1):
+        for city in tourist_cities:
+            if dist[city] <= i:
+                max_tourist_cities[i] = max(max_tourist_cities[i], max_tourist_cities[i - dist[city]] + 1)
+                return max_tourist_cities
+
+def find_cities_visited(n, dist, b, tourist_cities, max_tourist_cities):
+   cities_visited = set()
+   i = b
+   for city in tourist_cities:
+      if dist[city] <= i and max_tourist_cities[i] == max_tourist_cities[i - dist[city]] + 1:
+         cities_visited.add(city)
+         i -= dist[city] 
+         return cities_visited
+
+def main():
+    # Read the input from the file
+    with open("harta.in", "r") as f:
+        n, m = map(int, f.readline().split())
+        graph = [[] for _ in range(n)]
+           for _ in range(m):
+               i, j, k = map(int, f.readline().split())
+               graph[i - 1].append((j - 1, k))
+               graph[j - 1].append((i - 1, k))
+               s = int(f.readline()) - 1
+               tourist_cities = set(map(int, f.readline().split()))
+           # Find the shortest path from the starting city to all other cities
+           dist = find_shortest_paths(n, m, graph, s)
+           # Read the maximum number of kilometers traveled from the keyboard
+           b = int(input())
+           # Find the maximum number of tourist cities that can be visited while staying within the limit on the number of kilometers traveled
+           max_tourist_cities = find_max_tourist_cities(n, dist, b, tourist_cities)
+           # Find the cities that were visited
+           cities_visited = find_cities_visited(n, dist, b, tourist_cities, max_tourist_cities)
+# Print the result
+print("Maximum number of tourist cities visited:", max_tourist_cities[b])
+print("Cities visited:", cities_visited)
+
+if name == "main":
+main()
+
+
+
+
+
+-------------------------------------------------------------------------------------------------------
+-------------------------------------------------------------------------------------------------------------
+----------------------------------Exercitii Mai-------------------------------------------------------
+
+
+1.
+Se dau un graf neorientat G cu n>3 vârfuri și m muchii și o mulțime M de k vârfuri din graf. 
+Informațiile despre graf se citesc din fișierul graf.in cu structura:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitățile unei muchii
+- pe penultima line este numărul k
+- pe ultima linie sunt k numere reprezentând cele k vârfuri din M
+a) Adăugați la G un număr minim de muchii astfel încât în graful obținut G' toate vârfurile din M să fie în aceeași componentă conexă. Să se afișeze pe ecran muchiile adăugate
+b) Să se afișeze toate vârfurile din componenta conexă a lui G' care conține vârfurile din M
+Complexitate O(n+m)
+
+
+# first, we need to define the graph using an adjacency list
+graph = {}
+
+# read the input file
+with open("graf.in", "r") as f:
+    n, m = map(int, f.readline().split())
+    for i in range(m):
+        u, v = map(int, f.readline().split())
+        if u not in graph:
+            graph[u] = []
+        if v not in graph:
+            graph[v] = []
+        graph[u].append(v)
+        graph[v].append(u)
+    k = int(f.readline())
+    M = set(map(int, f.readline().split()))
+
+# now we need to find all vertices in the same connected component as M
+# we can use a depth-first search for this
+visited = set()
+
+def dfs(v, graph, visited):
+    visited.add(v)
+    for neighbor in graph[v]:
+        if neighbor not in visited:
+            dfs(neighbor, graph, visited)
+
+# start the dfs from any vertex in M
+for vertex in M:
+    dfs(vertex, graph, visited)
+
+# visited now contains all vertices in the same connected component as M
+
+# a) to add the minimum number of edges we need to connect all vertices in M
+# we can use a breadth-first search for this
+
+# initialize a queue with all vertices in M
+queue = list(M)
+
+# initialize a set to keep track of visited vertices
+visited = set(M)
+
+# initialize a list to store the added edges
+added_edges = []
+
+# perform the breadth-first search
+while queue:
+    v = queue.pop(0)
+    for neighbor in graph[v]:
+        if neighbor not in visited:
+            visited.add(neighbor)
+            queue.append(neighbor)
+            added_edges.append((v, neighbor))
+
+# print the added edges
+print("Added edges:")
+for edge in added_edges:
+    print(edge)
+
+# b) print the vertices in the connected component of G' containing the vertices in M
+print("Vertices in the connected component:", visited)
+
+
+
+
+
+2.
+Se citesc informații despre un graf neorientat conex G din fișierul graf.in. Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de muchii m ale grafului
+- pe următoarele m linii sunt câte 2 numere reprezentând extremitățile unei muchii din graf.
+O parte din muchiile grafului s-au defectat (graful reprezintă, de exemplu, o rețea de străzi bidirecționale între anumite obiective turistice). De aceea se dau în fișierul defecte.in o listă 
+de muchii din graf reprezentând muchiile (străzile) care trebuie reparate, pentru fiecare muchie fiind dat și costul reparării ei. Fișierul are următoarea structură:
+- pe prima linie este un număr k<m reprezentând numărul de muchii (străzi) defecte
+- pe următoarele k linii sunt câte 3 numere pozitive, primele două reprezentând extremitățile unei muchii defecte din graf iar al treilea număr fiind costul reparării acelei muchii.
+Muchiile din fișierul defecte.in păstrează ordinea în care sunt date în graf.in (formează un subșir al șirului de muchii din graf.in)
+Să se determine o mulțime de muchii defecte de cost total minim care trebuie reparate astfel încât după reparații între oricare două vârfuri din graf să existe un lanț format din muchii care 
+nu sunt defecte (altfel spus, să se determine ce străzi defecte din rețea trebuie reparate pentru a se asigura că între oricare două obiective se poate ajunge folosind străzi bune, cu costul reparațiilor minim).
+Se vor afișa și muchiile care trebuie reparate și un lanț de la vârful 1 la vârful n format din muchii care nu mai sunt defecte după reparații (nu erau defecte sau au fost reparate). 
+Complexitate O(mlog(n)).
+
+
+
+# Read the data from the files
+n, m = [int(x) for x in input().split()]
+edges = []
+for i in range(m):
+    u, v, w = [int(x) for x in input().split()]
+    edges.append((u, v, w))
+
+k = int(input())
+defective_edges = []
+for i in range(k):
+    u, v, w = [int(x) for x in input().split()]
+    defective_edges.append((u, v, w))
+
+# Sort the edges by their weight
+defective_edges.sort(key=lambda x: x[2])
+
+# Initialize the disjoint set data structure
+parent = [i for i in range(n+1)]
+rank = [0 for i in range(n+1)]
+
+# Helper function to find the root of a node
+def find(node):
+    if parent[node] != node:
+        parent[node] = find(parent[node])
+    return parent[node]
+
+# Helper function to merge two sets
+def union(u, v):
+    root1 = find(u)
+    root2 = find(v)
+    if root1 != root2:
+        if rank[root1] < rank[root2]:
+            parent[root1] = root2
+        elif rank[root1] > rank[root2]:
+            parent[root2] = root1
+        else:
+            parent[root2] = root1
+            rank[root1] +=
+.....
+
+
+
+3.
+
+Se consideră un fișier secvente.in cu următoarele informații:
+• pe prima linie este un număr natural n
+• pe următoarea linie sunt n numere naturale separate prin spațiu, reprezentând elementele unei secvențe s_in
+• pe a treia linie sunt n numere naturale separate prin spațiu, reprezentând elementele unei secvențe s_out.
+Se citesc datele din fișier. Se citesc în plus de la tastatură două numere naturale x și y din mulțimea {1,2,…,n}.
+Rezolvați următoarele cerințe folosind algoritmul Ford-Fulkerson / Edmonds Karp de determinare a unui flux maxim într-o rețea de transport.
+Să se determine, dacă există, un graf orientat G (!fără bucle sau arce multiple) cu următoarele proprietăți:
+• are secvența gradelor de intrare s_in și secvența gradelor de ieșire s_out 
+• graful nu conține arce de forma (i,i+1) i=1,...,n-1. 
+• graful conține arcul (x,y)
+Se vor afișa arcele grafului dacă acesta există, și un mesaj corespunzător altfel. 
+
+
+import networkx as nx
+
+# Read data from file
+with open('sequentie.in', 'r') as f:
+    n = int(f.readline())
+    s_in = list(map(int, f.readline().split()))
+    s_out = list(map(int, f.readline().split()))
+x, y = map(int, input("Enter x and y: ").split())
+
+# Create the graph and add edges
+G = nx.DiGraph()
+for i in range(n):
+    G.add_node(i+1)
+    for j in range(s_out[i]):
+        G.add_edge(i+1, (i+1)%n+1)
+
+# Find maximum flow
+flow = nx.maximum_flow(G, x, y)
+
+# Check if there is a feasible solution
+if flow[0] == s_in[x-1]:
+    # Display the arcs of the graph
+    for u, v in G.edges():
+        print(f"({u}, {v})")
+else:
+    print("No feasible solution")
+
+
+
+
+4.
+Se dă un graf orientat G cu n>3 vârfuri și m arce. 
+Informațiile despre graf se citesc din fișierul grafor.in cu structura:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitatea inițială și extremitatea finală ale unui arc
+a) Să se determine dacă G are o componentă tare conexă cu cel puțin [n/2] vârfuri (dominantă) și să se afișeze vârfurile unei astfel de componente (tare conexă dominantă)
+b) Să se afișeze toate arcele care nu aparțin unei componente tare conexe (au extremități în componente tare conexe diferite).
+Complexitate O(n+m)
+
+def strongly_connected_dominant(n, m, arcs):
+    # Create a list of empty lists to store the graph
+    graph = [[] for _ in range(n)]
+    # Create a list to store the in-degree of each vertex
+    indegree = [0 for _ in range(n)]
+    # Create a list to store the out-degree of each vertex
+    outdegree = [0 for _ in range(n)]
+    # Create a list to store the visited status of each vertex
+    visited = [0 for _ in range(n)]
+    # Create a stack to store the vertices for DFS
+    stack = []
+    # Create a list to store the strongly connected component
+    scc = []
+    # Create a list to store the non-scc arcs
+    non_scc_arcs = []
+    # Add the arcs to the graph, and increase the in-degree and out-degree of the vertices
+    for i, j in arcs:
+        graph[i].append(j)
+        indegree[j] += 1
+        outdegree[i] += 1
+    # Perform DFS to find the strongly connected component
+    for i in range(n):
+        if not visited[i]:
+            stack.append(i)
+            visited[i] = 1
+            while stack:
+                v = stack.pop()
+                scc.append(v)
+                for u in graph[v]:
+                    if not visited[u]:
+                        stack.append(u)
+                        visited[u] = 1
+    # Find the strongly connected component with at least [n/2] vertices
+    scc_size = len(scc)
+    if scc_size >= n/2:
+        dominant_scc = scc
+    else:
+        dominant_scc = []
+    # Perform DFS again to find the non-scc arcs
+    visited = [0 for _ in range(n)]
+    for i in scc:
+        visited[i] = 1
+    for i in range(n):
+        if not visited[i]:
+            stack.append(i)
+            visited[i] = 1
+            while stack:
+                v = stack.pop()
+                for u in graph[v]:
+
+def strongly_connected_dominant_component(graph):
+    # Initialize variables to keep track of visited nodes and the current strongly connected component
+    visited = [False] * len(graph)
+    scc = []
+    current_scc = []
+    # Use the Tarjan algorithm to find strongly connected components
+    def tarjan(node):
+        visited[node] = True
+        current_scc.append(node)
+        for neighbor in graph[node]:
+            if not visited[neighbor]:
+                tarjan(neighbor)
+    for i in range(len(graph)):
+        if not visited[i]:
+            tarjan(i)
+            scc.append(current_scc)
+            current_scc = []
+    # Find the strongly connected dominant component
+    dominant_scc = max(scc, key=len)
+    if len(dominant_scc) >= len(graph) / 2:
+        return dominant_scc
+    else:
+        return None
+
+def non_solid_arcs(graph, scc):
+    # Create a dictionary to map each vertex to its strongly connected component
+    vertex_to_scc = {}
+    for component in scc:
+        for vertex in component:
+            vertex_to_scc[vertex] = component
+    # Iterate through the arcs in the graph, and check if the endpoints belong to different strongly connected components
+
+
+
+
+5.
+Se citesc informații despre un graf neorientat conex, ponderat G din fișierul graf.in. 
+Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de muchii m ale grafului
+- pe următoarele m linii sunt câte 3 numere pozitive reprezentând extremitățile și costul uneimuchii din graf 
+Graful reprezintă o rețea de comunicare (bidirecțională), costul unei muchii xy reprezentând timpul necesar unui mesaj pentru a ajunge din nodul x în nodul y.
+Un mesaj urmează să se transmită în rețea, pornind dintr-o mulțime de noduri sursă M={m1,…,mk} care transmit mesajul. Numărul k și nodurile sursă se vor citi din fișierul surse.in, având următoarea structură:
+- pe prima linie este numărul natural k
+- pe a doua linie sunt k numere naturale separate prin spațiu, reprezentând nodurile din M
+a) Să se determine pentru fiecare nod din graf cât de repede poate primi mesajul și de la ce sursă (care este cel mai apropiat nod sursă)
+b) Se citește un nod x de la tastatura. Să se afișeze cel mai scurt traseu (ca durată totală) prin care x poate primi mesajul de la un nod sursa din M.
+Complexitate O(m log(n))
+
+
+import heapq
+
+# function to determine the fastest time each node can receive the message and from which source
+def fastest_time_and_source(graph, sources):
+    n = len(graph)
+    # initialize an array to store the fastest time and source for each node
+    fastest = [[float('inf'), -1] for _ in range(n)]
+    # initialize a priority queue with the source nodes and their fastest time as 0
+    q = [[0, i] for i in sources]
+    heapq.heapify(q)
+    # perform Dijkstra's algorithm to find the fastest time and source for each node
+    while q:
+        time, node = heapq.heappop(q)
+        if time < fastest[node][0]:
+            fastest[node][0] = time
+            fastest[node][1] = node
+            for neighbor, cost in graph[node]:
+                heapq.heappush(q, [time + cost, neighbor])
+    return fastest
+
+# function to determine the shortest path for a given node to receive the message
+def shortest_path(graph, sources, node):
+    n = len(graph)
+    # initialize an array to store the shortest path for each node
+    shortest = [float('inf')] * n
+    # initialize a priority queue with the source nodes and their shortest path as 0
+    q = [[0, i] for i in sources]
+    heapq.heapify(q)
+    # perform Dijkstra's algorithm to find the shortest path for each node
+    while q:
+        path, node = heapq.heappop(q)
+        if path < shortest[node]:
+            shortest[node] = path
+            for neighbor, cost in graph[node]:
+                heapq.heappush(q, [path + cost, neighbor])
+    return shortest
+
+# function to read the graph from the graf.in file
+def read_graph():
+    with open('graf.in', 'r') as f:
+        n, m = map(int, f.readline().split())
+        graph = [[] for _ in range(n)]
+        for _ in range(m):
+            u, v, w = map(int, f.readline().split())
+            graph[u].append((v, w))
+            graph[v].append((u, w))
+    return graph
+
+# function to read the source nodes from the sources.in file
+def read_sources():
+    with open('sources.in', 'r') as f:
+        k = int(f.readline())
+        sources = list(map(int, f.readline().split()))
+	return sources
+
+
+def read_target():
+	return int(input("Enter the target node: "))
+
+	if name == "main":
+		graph = read_graph()
+		sources = read_sources()
+		fastest = fastest_time_and_source(graph, sources)
+		print("Fastest time and source for each node: ", fastest)
+		target = read_target()
+		shortest = shortest_path(graph, sources, target)
+		print("Shortest path for node ", target, ": ", shortest[target])
+
+
+
+6. 
+
+Se consideră un fișier secvente.in cu următoarele informații:
+• pe prima linie este un număr natural n
+• pe următoarea linie sunt n numere naturale separate prin spațiu, reprezentând elementele unei secvențe s_in
+• pe a treia linie sunt n numere naturale separate prin spațiu, reprezentând elementele unei secvențe s_out.
+Se consideră de asemenea un fișier arce.in cu următoarele informații despre k arce :
+• pe prima linie este un număr natural k < 10
+• pe următoarele k linii sunt câte două numere x și y reprezentând extremitatea inițială și finală a unui arc.
+Rezolvați următoarele cerințe folosind algoritmul Ford-Fulkerson / Edmonds Karp de determinare a unui flux maxim într-o rețea de transport
+Să se determine, dacă există, un graf orientat G (!fără bucle sau arce multiple) cu următoarele proprietăți:
+• are secvența gradelor de intrare s_in și secvența gradelor de ieșire s_out 
+• nu conține arcele (între perechile) date în fișierul arce.in. 
+• conține arcul (1,n)
+Se vor afișa arcele grafului dacă acesta există, și un mesaj corespunzător altfel.
+
+
+import collections
+
+def read_sequences():
+    with open("sequences.in", "r") as f:
+        n = int(f.readline())
+        s_in = list(map(int, f.readline().strip().split()))
+        s_out = list(map(int, f.readline().strip().split()))
+    return n, s_in, s_out
+
+def read_arcs():
+    with open("arcs.in", "r") as f:
+        k = int(f.readline())
+        forbidden_arcs = set()
+        for _ in range(k):
+            x, y = map(int, f.readline().strip().split())
+            forbidden_arcs.add((x, y))
+    return forbidden_arcs
+
+def construct_graph(n, s_in, s_out, forbidden_arcs):
+    graph = collections.defaultdict(list)
+    for i in range(1, n+1):
+        for j in range(1, n+1):
+            if i == j:
+                continue
+            if (i, j) not in forbidden_arcs and s_out[i-1] > 0 and s_in[j-1] > 0:
+		graph[i].append(j)
+s_out[i-1] -= 1
+s_in[j-1] -= 1
+return graph
+
+def max_flow(graph, source, sink):
+flow = 0
+while True:
+# perform BFS to find a path with available capacity
+q = collections.deque([source])
+path = [-1] * (n+1)
+while q:
+u = q.popleft()
+for v in graph[u]:
+if path[v] == -1 and s_out[u-1] > 0:
+path[v] = u
+q.append(v)
+# if no path found, return current flow
+if path[sink] == -1:
+return flow
+# find the minimum capacity of the path
+min_cap = float("inf")
+v = sink
+while v != source:
+u = path[v]
+min_cap = min(min_cap, s_out[u-1])
+v = u
+# add the flow to the edges and reverse edges
+v = sink
+while v != source:
+u = path[v]
+s_out[u-1] -=
+
+
+
+
+-----------------------------------Lab2021----------------------------
+
+
+1.
+Se dă un graf neorientat conex cu n>3 vârfuri și m>n muchii. 
+Informațiile despre graf se citesc din fișierul graf.in cu următoarea structură:
+- pe prima linie sunt n și m
+- pe următoarele m linii sunt câte 2 numere naturale reprezentând extremitățile unei muchii
+Se citește de la tastatură un vârf v. 
+a) Să se afișeze muchiile incidente în v care nu sunt critice, dacă există (altfel se va afișa mesajul “nu exista”). O(m)
+b) Să se afișeze muchiile unui arbore parțial T al lui G în care vârful v are gradul cu 1 mai mic decât îl are în G: dT(v) = dG(v) – 1, dacă un astfel de arbore există.
+
+
+def read_graph():
+    with open('graf.in', 'r') as f:
+        n, m = map(int, f.readline().split())
+        graph = [[] for _ in range(n)]
+        for _ in range(m):
+            u, v = map(int, f.readline().split())
+            graph[u].append(v)
+            graph[v].append(u)
+    return graph
+
+def find_incident_edges(graph, v):
+    incident_edges = []
+    for i, neighbor in enumerate(graph[v]):
+        incident_edges.append((v, neighbor))
+    return incident_edges
+
+def find_partial_tree(graph, v):
+    partial_tree = []
+    visited = [False] * len(graph)
+    def dfs(node, parent):
+        visited[node] = True
+        for neighbor in graph[node]:
+            if neighbor != parent:
+                partial_tree.append((node, neighbor))
+                dfs(neighbor, node)
+    dfs(v, -1)
+    return partial_tree
+
+graph = read_graph()
+v = int(input("Enter a vertex: "))
+inc
+
+
+  
+
+2.
+Se citesc informații despre un graf orientat fără circuite G din fișierul graf.in. 
+Fișierul are următoarea structură:
+- pe prima linie sunt două numere reprezentând numărul de vârfuri n (n>4) și numărul de arce m ale grafului
+- pe următoarele m linii sunt câte 3 numere întregi reprezentând extremitatea inițială, extremitatea finală și costul unui arc din graf (costul unui arc poate fi și negativ). 
+- pe penultima linie sunt două noduri s și t
+- pe ultima linie sunt două noduri u și v.
+Spunem că un vârf y este accesibil din x în G dacă există un drum de la x la y. Presupunem că vârful t este accesibil din s și că vârful v este accesibil din u.
+a) Să se determine excentricitatea vârfului s raportat la t: ec(s|t) = max{d(s,t)+d(t,v)| v accesibil din t}= d(s,t) + max{ d(t,v)| v accesibil din t}. Complexitate O(n+m)
+b) Să se afișeze un drum de cost maxim de la u la v în G. Complexitate O(n+m)
+
+
+import collections
+
+# function to read graph from graf.in file
+def read_graph():
+    with open("graf.in", "r") as f:
+        n, m = map(int, f.readline().strip().split())
+        graph = collections.defaultdict(list)
+        for _ in range(m):
+            u, v, w = map(int, f.readline().strip().split())
+            graph[u].append((v, w))
+    return graph, n
+
+# function to read s, t, u, and v from graf.in file
+def read_stuv():
+    with open("graf.in", "r") as f:
+        lines = f.readlines()
+        s, t = map(int, lines[-3].strip().split())
+        u, v = map(int, lines[-2].strip().split())
+    return s, t, u, v
+
+# function to determine the eccentricity of s relative to t
+def eccentricity(graph, s, t):
+    # initialize distance from s to all vertices as infinity
+    dist = {v: float('inf') for v in graph}
+    dist[s] = 0
+    # perform BFS from s
+    queue = collections.deque([s])
+    while queue:
+        u
+
+
+
+
+
+
+
